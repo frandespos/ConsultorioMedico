@@ -4,7 +4,26 @@ Parcial domiciliario - Algoritmos y Estructuras de Datos III - ISFT N° 210
 
 ## Cómo correrlo
 
+### Requisitos
+
+- [Python](https://www.python.org/downloads/) 3.10 o superior. Python no se instala con `pip`.
+- [Git](https://git-scm.com/downloads).
+
+Para comprobar que están instalados:
+
 ```bash
+python3 --version
+git --version
+```
+
+### Instalación
+
+Abrir una terminal y ejecutar estos comandos. `git clone` crea la carpeta `ConsultorioMedico`, así que no hace falta crearla antes.
+
+```bash
+cd ~/Documents
+git clone https://github.com/frandespos/ConsultorioMedico.git
+cd ConsultorioMedico
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -13,7 +32,29 @@ python manage.py cargar_datos
 python manage.py runserver
 ```
 
+En Windows, usar `python` en lugar de `python3` y activar el entorno con `venv\Scripts\activate`.
+
+### Ingreso
+
 Entrar a http://127.0.0.1:8000 con usuario `secretario` y contraseña `cmet2026`.
+
+El sistema arranca con los profesionales y las obras sociales cargados, pero sin pacientes ni turnos.
+
+### Para volver a abrirlo
+
+```bash
+cd ~/Documents/ConsultorioMedico
+source venv/bin/activate
+python manage.py runserver
+```
+
+Para detener el servidor, presionar `Ctrl + C`.
+
+### Tests
+
+```bash
+python manage.py test
+```
 
 ## Avisos al paciente
 
