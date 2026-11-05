@@ -1,12 +1,12 @@
 # Sistema de Turnos - Consultorio Médico El Toboso (CMET)
 
-Parcial domiciliario - Algoritmos y Estructuras de Datos III - ISFT N° 210
+Parcial  - Algoritmos y Estructuras de Datos III - ISFT N° 210
 
-## Cómo correrlo
+
 
 ### Requisitos
 
-- [Python](https://www.python.org/downloads/) 3.10 o superior. Python no se instala con `pip`.
+- [Python](https://www.python.org/downloads/) 3.10 o superior. 
 - [Git](https://git-scm.com/downloads).
 
 Para comprobar que están instalados:
@@ -18,7 +18,6 @@ git --version
 
 ### Instalación
 
-Abrir una terminal y ejecutar estos comandos. `git clone` crea la carpeta `ConsultorioMedico`, así que no hace falta crearla antes.
 
 ```bash
 cd ~/Documents
