@@ -1,0 +1,23 @@
+{% extends "turnos/base.html" %}
+{% block contenido %}
+<div class="row justify-content-center">
+  <div class="col-md-7">
+    <div class="card shadow-sm"><div class="card-body p-4">
+      <h3 class="mb-3">Dar turno</h3>
+      <form method="post">
+        {% csrf_token %}
+        {% for campo in form %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">{{ campo.label }}</label>
+            {{ campo }}
+            {% if campo.help_text %}<div class="helptext">{{ campo.help_text }}</div>{% endif %}
+            {% for e in campo.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+          </div>
+        {% endfor %}
+        <button class="btn btn-primary">Asignar turno</button>
+        <a href="{% url 'nuevo_paciente' %}" class="btn btn-link">¿Paciente nuevo?</a>
+      </form>
+    </div></div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,27 @@
+{% extends "turnos/base.html" %}
+{% block contenido %}
+<h3>{{ paciente.nombre_completo }}</h3>
+<p class="text-muted">{{ paciente.mostrar_datos }} · Tel. {{ paciente.telefono }}</p>
+<div class="card shadow-sm">
+<table class="table mb-0">
+  <thead><tr><th>Fecha</th><th>Tipo</th><th>Hora / N°</th><th>Profesional</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+  {% for t in turnos %}
+    <tr class="{% if not t.esta_activo %}text-muted{% endif %}">
+      <td>{{ t.fecha|date:"d/m/Y" }}</td><td>{{ t.get_tipo }}</td><td>{{ t.get_detalle }}</td>
+      <td>{{ t.profesional }} ({{ t.profesional.especialidad }})</td>
+      <td>{{ t.get_estado_display }}</td>
+      <td class="text-end text-nowrap">
+        {% if t.whatsapp.disponible %}<a href="{{ t.whatsapp.enlace }}" target="_blank" rel="noopener" class="btn btn-sm btn-success">WhatsApp</a>{% endif %}
+        {% if t.esta_activo %}<form class="d-inline" method="post" action="{% url 'cancelar_turno' t.pk %}" onsubmit="return confirm('¿Cancelar este turno?')">
+          {% csrf_token %}<input type="hidden" name="volver" value="{{ request.get_full_path }}">
+          <button class="btn btn-sm btn-outline-danger">Cancelar</button>
+        </form>{% endif %}</td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="text-center text-muted py-4">Sin turnos registrados.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

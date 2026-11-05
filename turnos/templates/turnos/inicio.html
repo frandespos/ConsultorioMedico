@@ -1,0 +1,46 @@
+{% extends "turnos/base.html" %}
+{% load static %}
+{% block estilos %}
+<style>
+  body { background: #f4f7fb url("{% static 'turnos/fondo-home.svg' %}") center / cover no-repeat fixed; }
+  .tabla-agenda thead th { background: #e8f1f8; color: #1f4e79; }
+</style>
+{% endblock %}
+{% block contenido %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-3">
+  <div>
+    <h3 class="mb-0">Agenda del {{ fecha|date:"l d/m/Y" }}</h3>
+    <div class="text-muted">{{ turnos|length }} turno{{ turnos|length|pluralize }}</div>
+  </div>
+  <form class="d-flex gap-2" method="get">
+    <input type="date" name="fecha" value="{{ fecha|date:'Y-m-d' }}" style="width:auto;margin:0">
+    <button class="btn btn-outline-primary">Ver</button>
+    <a href="{% url 'dar_turno' %}" class="btn btn-primary text-nowrap">+ Dar turno</a>
+  </form>
+</div>
+<div class="card shadow-sm overflow-hidden">
+<table class="table table-hover align-middle mb-0 tabla-agenda">
+  <thead><tr><th>Tipo</th><th>Hora / N°</th><th>Profesional</th><th>Especialidad</th><th>Paciente</th><th></th></tr></thead>
+  <tbody>
+  {% for t in turnos %}
+    <tr>
+      <td><span class="badge {% if t.get_tipo == 'Con turno' %}bg-primary{% else %}bg-warning text-dark{% endif %}">{{ t.get_tipo }}</span></td>
+      <td>{{ t.get_detalle }}</td>
+      <td>{{ t.profesional }}</td>
+      <td>{{ t.profesional.especialidad }}</td>
+      <td><a href="{% url 'historial' t.paciente.pk %}">{{ t.paciente }}</a> <small class="text-muted">({{ t.paciente.obra_social }})</small></td>
+      <td class="text-end text-nowrap">
+        {% if t.whatsapp.disponible %}<a href="{{ t.whatsapp.enlace }}" target="_blank" rel="noopener" class="btn btn-sm btn-success">WhatsApp</a>{% endif %}
+        <form class="d-inline" method="post" action="{% url 'cancelar_turno' t.pk %}" onsubmit="return confirm('¿Cancelar este turno?')">
+          {% csrf_token %}<input type="hidden" name="volver" value="{{ request.get_full_path }}">
+          <button class="btn btn-sm btn-outline-danger">Cancelar</button>
+        </form>
+      </td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="text-center text-muted py-4">No hay turnos para este día.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

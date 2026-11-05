@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice">
+  <title>Fondo del home - Consultorio Médico El Toboso</title>
+  <rect id="fondo" width="1600" height="1000" fill="#f4f7fb"/>
+  <g id="circulos" fill="#1f4e79">
+    <circle cx="60" cy="940" r="300" opacity=".025"/>
+    <circle cx="1520" cy="900" r="380" opacity=".035"/>
+  </g>
+  <path id="electrocardiograma" fill="none" stroke="#2f8fb3" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" opacity=".28"
+        d="M0 845h210l24-34 28 34h52l18 26 36-150 44 196 28-72h74l30-38 34 38h360l24-34 28 34h52l18 26 36-150 44 196 28-72h74l30-38 34 38h320"/>
+</svg>

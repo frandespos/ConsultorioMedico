@@ -1,0 +1,50 @@
+{% extends "turnos/base.html" %}
+{% load static %}
+{% block estilos %}
+<style>
+  body { background: #1f4e79 url("{% static 'turnos/fondo-login.svg' %}") center / cover no-repeat fixed; }
+</style>
+{% endblock %}
+{% block contenido %}
+<div class="row justify-content-center align-items-center min-vh-100">
+  <div class="col-md-4">
+    <div class="card shadow-lg border-0">
+      <div class="card-body p-4">
+        <h4 class="text-center mb-1">Consultorio Médico El Toboso</h4>
+        <p class="text-center text-muted mb-4">Sistema de turnos</p>
+        {% if form.errors %}<div class="alert alert-danger">Usuario o contraseña incorrectos.</div>{% endif %}
+        <form method="post">
+          {% csrf_token %}
+          <label class="form-label">Usuario</label>
+          <input type="text" name="username" autofocus required>
+          <label class="form-label mt-2">Contraseña</label>
+          <div class="position-relative">
+            <input type="password" name="password" id="password" class="mb-0" style="padding-right:2.5rem" required>
+            <button type="button" id="toggle-password" aria-label="Mostrar contraseña" title="Mostrar contraseña"
+                    class="btn btn-link text-secondary position-absolute top-50 end-0 translate-middle-y p-0 me-2 d-flex">
+              <svg id="icono-ojo" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/>
+                <circle cx="12" cy="12" r="3"/>
+                <line id="tachado-ojo" x1="3" y1="3" x2="21" y2="21"/>
+              </svg>
+            </button>
+          </div>
+          <button class="btn btn-primary w-100 mt-3">Ingresar</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  document.getElementById("toggle-password").addEventListener("click", function () {
+    const input = document.getElementById("password");
+    const mostrar = input.type === "password";
+    input.type = mostrar ? "text" : "password";
+    document.getElementById("tachado-ojo").style.display = mostrar ? "none" : "";
+    const texto = mostrar ? "Ocultar contraseña" : "Mostrar contraseña";
+    this.setAttribute("aria-label", texto);
+    this.title = texto;
+  });
+</script>
+{% endblock %}

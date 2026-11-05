@@ -1,0 +1,18 @@
+{% extends "turnos/base.html" %}
+{% block contenido %}
+<h3 class="mb-3">Profesionales</h3>
+<div class="row g-3">
+{% for esp in especialidades %}
+  {% for p in esp.profesionales.all %}
+  <div class="col-md-6 col-lg-4">
+    <div class="card shadow-sm h-100"><div class="card-body">
+      <h6 class="text-primary mb-1">{{ esp }}</h6>
+      <h5>{{ p.nombre_completo }}</h5>
+      <ul class="small mb-2 ps-3">{% for h in p.horarios.all %}<li>{{ h.get_dia_display }} {{ h.hora_inicio|time:"H:i" }} a {{ h.hora_fin|time:"H:i" }}{% if h.frecuencia != "semanal" %} ({{ h.get_frecuencia_display }}){% endif %}</li>{% endfor %}</ul>
+      <div class="small text-muted">{% for o in p.obras_sociales.all %}{{ o }}{% if not forloop.last %} · {% endif %}{% endfor %}</div>
+    </div></div>
+  </div>
+  {% endfor %}
+{% endfor %}
+</div>
+{% endblock %}
