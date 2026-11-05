@@ -1,4 +1,9 @@
 {% extends "turnos/base.html" %}
+{% block estilos %}
+<style>
+  select[name="hora_0"], select[name="hora_1"] { display: inline-block; width: auto; margin-right: .5rem; }
+</style>
+{% endblock %}
 {% block contenido %}
 <div class="row justify-content-center">
   <div class="col-md-7">

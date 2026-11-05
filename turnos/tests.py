@@ -10,6 +10,13 @@ from .models import (DIAS_SEMANA, Consultorio, Especialidad, HorarioAtencion, Ob
 from .notificaciones import NotificacionWhatsApp
 
 HOY = date.today()
+
+
+def campos_hora(hora):
+    horas, minutos = hora.split(":") if hora else ("", "")
+    return {"hora_0": horas, "hora_1": minutos}
+
+
 PROXIMO_MARTES = HOY + timedelta(days=(-HOY.weekday()) % 7 + 1)
 
 
@@ -30,7 +37,7 @@ class AvisosTests(TestCase):
         self.profesional.agregar_horario("martes", time(9), time(14), "semanal", modalidad)
         return self.client.post("/turnos/nuevo/", {
             "paciente": self.paciente.pk, "profesional": self.profesional.pk,
-            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", "hora": hora}, follow=True)
+            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", **campos_hora(hora)}, follow=True)
 
     def test_turno_por_orden_muestra_boton_de_whatsapp(self):
         respuesta = self._asignar()
@@ -72,6 +79,21 @@ class AvisosTests(TestCase):
         self._asignar(hora="")
         self.assertEqual(Turno.objects.count(), 0)
 
+    def test_hora_incompleta_no_da_turno(self):
+        self.profesional.agregar_horario("martes", time(9), time(14), "semanal",
+                                         HorarioAtencion.ORDEN_LLEGADA)
+        self.client.post("/turnos/nuevo/", {
+            "paciente": self.paciente.pk, "profesional": self.profesional.pk,
+            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", "hora_0": "10", "hora_1": ""})
+        self.assertEqual(Turno.objects.count(), 0)
+
+    def test_selector_en_24_horas_conserva_la_hora_si_hay_error(self):
+        respuesta = self._asignar(hora="16:05")
+        self.assertContains(respuesta, '<option value="20">20</option>')
+        self.assertContains(respuesta, '<option value="16" selected>16</option>')
+        self.assertContains(respuesta, '<option value="05" selected>05</option>')
+        self.assertNotContains(respuesta, 'type="time"')
+
     def test_hora_fuera_del_horario_se_rechaza(self):
         respuesta = self._asignar(hora="16:00")
         self.assertEqual(Turno.objects.count(), 0)
@@ -82,7 +104,7 @@ class AvisosTests(TestCase):
         otro = Paciente.objects.create(nombre="Eva", apellido="Paz", dni="2", obra_social=self.obra)
         self.client.post("/turnos/nuevo/", {
             "paciente": otro.pk, "profesional": self.profesional.pk,
-            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", "hora": "10:30"})
+            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", **campos_hora("10:30")})
         self.assertEqual(sorted(TurnoPorOrden.objects.values_list("numero_orden", flat=True)),
                          [1, 2])
 
@@ -97,7 +119,7 @@ class AvisosTests(TestCase):
                                          HorarioAtencion.ORDEN_LLEGADA)
         respuesta = self.client.post("/turnos/nuevo/", {
             "paciente": self.paciente.pk, "profesional": self.profesional.pk,
-            "fecha": f"{PROXIMO_MARTES - timedelta(days=7):%Y-%m-%d}", "hora": "10:30"},
+            "fecha": f"{PROXIMO_MARTES - timedelta(days=7):%Y-%m-%d}", **campos_hora("10:30")},
             follow=True)
         self.assertEqual(Turno.objects.count(), 0)
         self.assertContains(respuesta, "fecha pasada")
