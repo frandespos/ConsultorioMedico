@@ -1,11 +1,16 @@
 from datetime import date, time, timedelta
 
 from django.contrib.auth.models import User
+from django.core.cache import cache
 from django.test import TestCase
 
-from .models import (Consultorio, Especialidad, HorarioAtencion, ObraSocial, Paciente, Profesional,
-                     Turno, TurnoPorOrden)
+from .forms import PacienteForm
+from .models import (DIAS_SEMANA, Consultorio, Especialidad, HorarioAtencion, ObraSocial, Paciente,
+                     Profesional, Turno, TurnoPorOrden)
 from .notificaciones import NotificacionWhatsApp
+
+HOY = date.today()
+PROXIMO_MARTES = HOY + timedelta(days=(-HOY.weekday()) % 7 + 1)
 
 
 class AvisosTests(TestCase):
@@ -25,12 +30,12 @@ class AvisosTests(TestCase):
         self.profesional.agregar_horario("martes", time(9), time(14), "semanal", modalidad)
         return self.client.post("/turnos/nuevo/", {
             "paciente": self.paciente.pk, "profesional": self.profesional.pk,
-            "fecha": "2026-11-24", "hora": hora}, follow=True)
+            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", "hora": hora}, follow=True)
 
     def test_turno_por_orden_muestra_boton_de_whatsapp(self):
         respuesta = self._asignar()
         self.assertContains(respuesta, "https://wa.me/5492214556677?text=Hola%20Ana")
-        self.assertContains(respuesta, "martes%2024/11/2026")
+        self.assertContains(respuesta, f"martes%20{PROXIMO_MARTES:%d/%m/%Y}")
         self.assertContains(respuesta, "Turno%3A%20N%C2%B0%201")
         self.assertContains(respuesta, "Horario%3A%2010%3A30%20hs")
         self.assertContains(respuesta, "N° 1 · 10:30 hs")
@@ -77,7 +82,7 @@ class AvisosTests(TestCase):
         otro = Paciente.objects.create(nombre="Eva", apellido="Paz", dni="2", obra_social=self.obra)
         self.client.post("/turnos/nuevo/", {
             "paciente": otro.pk, "profesional": self.profesional.pk,
-            "fecha": "2026-11-24", "hora": "10:30"})
+            "fecha": f"{PROXIMO_MARTES:%Y-%m-%d}", "hora": "10:30"})
         self.assertEqual(sorted(TurnoPorOrden.objects.values_list("numero_orden", flat=True)),
                          [1, 2])
 
@@ -87,9 +92,83 @@ class AvisosTests(TestCase):
         turno = TurnoPorOrden.objects.get()
         self.assertIn("Horario: 09:00 a 14:00 hs", turno.texto_aviso())
 
+    def test_fecha_pasada_se_rechaza(self):
+        self.profesional.agregar_horario("martes", time(9), time(14), "semanal",
+                                         HorarioAtencion.ORDEN_LLEGADA)
+        respuesta = self.client.post("/turnos/nuevo/", {
+            "paciente": self.paciente.pk, "profesional": self.profesional.pk,
+            "fecha": f"{PROXIMO_MARTES - timedelta(days=7):%Y-%m-%d}", "hora": "10:30"},
+            follow=True)
+        self.assertEqual(Turno.objects.count(), 0)
+        self.assertContains(respuesta, "fecha pasada")
+
+    def test_turno_para_hoy_se_permite(self):
+        self.profesional.agregar_horario(DIAS_SEMANA[HOY.weekday()], time(9), time(14), "semanal",
+                                         HorarioAtencion.ORDEN_LLEGADA)
+        turno = self.consultorio.dar_turno(self.paciente, self.profesional, HOY, time(10))
+        self.assertTrue(turno.esta_activo())
+
     def test_sin_telefono_valido_no_hay_boton(self):
         Paciente.objects.update(telefono="4556677")
         self.assertNotContains(self._asignar(), "wa.me")
+
+
+class LoginTests(TestCase):
+    def setUp(self):
+        cache.clear()
+        User.objects.create_user("secretario", password="cmet2026")
+
+    def _ingresar(self, password, usuario="secretario"):
+        return self.client.post("/login/", {"username": usuario, "password": password})
+
+    def test_informa_los_intentos_restantes(self):
+        self.assertContains(self._ingresar("mal"), "2 intentos restantes")
+        self.assertContains(self._ingresar("mal"), "1 intento restante")
+
+    def test_tercer_intento_bloquea_aunque_despues_la_clave_sea_correcta(self):
+        self._ingresar("mal")
+        self._ingresar("mal")
+        self.assertContains(self._ingresar("mal"), "Acceso bloqueado")
+        self.assertContains(self._ingresar("cmet2026"), "Acceso bloqueado")
+        self.assertNotIn("_auth_user_id", self.client.session)
+
+    def test_ingreso_correcto_reinicia_los_intentos(self):
+        self._ingresar("mal")
+        self._ingresar("mal")
+        self.assertRedirects(self._ingresar("cmet2026"), "/", fetch_redirect_response=False)
+        self.client.logout()
+        self.assertContains(self._ingresar("mal"), "2 intentos restantes")
+
+    def test_bloqueo_no_afecta_a_otro_usuario(self):
+        for _ in range(3):
+            self._ingresar("mal", "otro")
+        self.assertRedirects(self._ingresar("cmet2026"), "/", fetch_redirect_response=False)
+
+
+class DatosPacienteTests(TestCase):
+    def _form(self, **cambios):
+        obra = ObraSocial.objects.create(nombre="Particular")
+        return PacienteForm({"nombre": "Ana", "apellido": "Gómez", "dni": "1",
+                             "telefono": "2214556677", "obra_social": obra.pk, **cambios})
+
+    def test_datos_correctos(self):
+        self.assertTrue(self._form().is_valid())
+
+    def test_dni_obligatorio(self):
+        self.assertIn("dni", self._form(dni="").errors)
+
+    def test_dni_con_letras_o_puntos_se_rechaza(self):
+        for dni in ("41abc625", "41.391.625", "41 391 625"):
+            ObraSocial.objects.all().delete()
+            self.assertIn("dni", self._form(dni=dni).errors, dni)
+
+    def test_telefono_con_letras_se_rechaza(self):
+        self.assertIn("telefono", self._form(telefono="221abc").errors)
+
+    def test_telefono_acepta_separadores_y_puede_quedar_vacio(self):
+        for telefono in ("(0221) 15-455-6677", "+54 9 221 4556677", ""):
+            ObraSocial.objects.all().delete()
+            self.assertTrue(self._form(telefono=telefono).is_valid(), telefono)
 
 
 class ABMPacienteTests(TestCase):

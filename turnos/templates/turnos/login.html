@@ -12,7 +12,7 @@
       <div class="card-body p-4">
         <h4 class="text-center mb-1">Consultorio Médico El Toboso</h4>
         <p class="text-center text-muted mb-4">Sistema de turnos</p>
-        {% if form.errors %}<div class="alert alert-danger">Usuario o contraseña incorrectos.</div>{% endif %}
+        {% if mensaje_error %}<div class="alert alert-danger">{{ mensaje_error }}</div>{% endif %}
         <form method="post">
           {% csrf_token %}
           <label class="form-label">Usuario</label>

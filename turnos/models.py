@@ -23,9 +23,12 @@ from datetime import date
 
 from django.contrib.auth.models import User
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.db import models
 
 from .notificaciones import NotificacionWhatsApp
+
+DNI_VALIDO = RegexValidator(r"^[0-9]+$", "El DNI solo puede tener números, sin puntos.")
 
 DIAS_SEMANA = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
 
@@ -71,6 +74,9 @@ class Consultorio(models.Model):
         Crea el turno que corresponda según la modalidad del profesional ese día.
         Lanza ValidationError con el motivo si no se puede.
         """
+        if fecha < date.today():
+            raise ValidationError("No se puede dar un turno en una fecha pasada.")
+
         horario = profesional.horario_del_dia(fecha)
         if horario is None:
             raise ValidationError(f"{profesional.nombre_completo} no atiende ese día.")
@@ -135,8 +141,10 @@ class Persona(models.Model):
     """Clase abstracta: no crea tabla propia ni se puede instanciar sola."""
     nombre = models.CharField(max_length=100)
     apellido = models.CharField(max_length=100)
-    dni = models.CharField("DNI", max_length=15, blank=True)
-    telefono = models.CharField("teléfono", max_length=30, blank=True)
+    dni = models.CharField("DNI", max_length=15, blank=True, validators=[DNI_VALIDO])
+    telefono = models.CharField(
+        "teléfono", max_length=30, blank=True,
+        validators=[RegexValidator(r"^[\d\s()+-]*$", "El teléfono solo puede tener números.")])
 
     class Meta:
         abstract = True
@@ -153,6 +161,8 @@ class Persona(models.Model):
 
 
 class Paciente(Persona):
+    # En Persona es opcional; acá es obligatorio
+    dni = models.CharField("DNI", max_length=15, validators=[DNI_VALIDO])
     obra_social = models.ForeignKey(ObraSocial, on_delete=models.PROTECT)       # ASOCIACIÓN
     consultorio = models.ForeignKey(Consultorio, on_delete=models.SET_NULL,     # AGREGACIÓN
                                     null=True, related_name="pacientes")

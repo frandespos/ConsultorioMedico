@@ -1,13 +1,20 @@
+import hashlib
 from datetime import date, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.views import LoginView
+from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils.html import format_html
 
 from .forms import PacienteForm, TurnoForm
 from .models import Consultorio, Especialidad, Paciente, Turno
+
+
+MAX_INTENTOS_LOGIN = 3
+MINUTOS_BLOQUEO_LOGIN = 5
 
 
 def _consultorio():
@@ -21,6 +28,42 @@ def _confirmacion_cancelado(turno):
         return "Turno cancelado."
     return format_html('Turno cancelado. <a href="{}" target="_blank" rel="noopener" '
                        'class="alert-link">Avisar por WhatsApp</a>', whatsapp.enlace())
+
+
+class LoginConIntentos(LoginView):
+    """Bloquea un usuario por unos minutos después de tres contraseñas incorrectas."""
+    template_name = "turnos/login.html"
+
+    def _clave_intentos(self):
+        usuario = self.request.POST.get("username", "").strip().lower()
+        return "login:" + hashlib.sha256(usuario.encode()).hexdigest()
+
+    def _rechazar(self, mensaje, form):
+        return self.render_to_response(self.get_context_data(form=form, mensaje_error=mensaje))
+
+    def post(self, request, *args, **kwargs):
+        if cache.get(self._clave_intentos(), 0) >= MAX_INTENTOS_LOGIN:
+            return self._bloqueado()
+        return super().post(request, *args, **kwargs)
+
+    def _bloqueado(self):
+        # Formulario sin datos: así no se llega a comprobar la contraseña
+        mensaje = f"Acceso bloqueado. Probá de nuevo en {MINUTOS_BLOQUEO_LOGIN} minutos."
+        return self._rechazar(mensaje, self.form_class(self.request))
+
+    def form_valid(self, form):
+        cache.delete(self._clave_intentos())
+        return super().form_valid(form)
+
+    def form_invalid(self, form):
+        intentos = cache.get(self._clave_intentos(), 0) + 1
+        cache.set(self._clave_intentos(), intentos, MINUTOS_BLOQUEO_LOGIN * 60)
+        restantes = MAX_INTENTOS_LOGIN - intentos
+        if restantes <= 0:
+            return self._bloqueado()
+        return self._rechazar(f"Usuario o contraseña incorrectos "
+                              f"({restantes} intento{'s' if restantes > 1 else ''} "
+                              f"restante{'s' if restantes > 1 else ''}).", form)
 
 
 @login_required
